@@ -22,7 +22,7 @@ describe("Socle frontend", () => {
         render(<App />);
 
         expect(
-            await screen.findByText(/lab-back-django/i)
+            await screen.findByText(/lab-back-django__/i)
         ).toBeInTheDocument();
     });
 });
