@@ -1,0 +1,23 @@
+name: Test Runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-runner:
+    runs-on: self-hosted
+
+    steps:
+      - name: Test communication
+        run: |
+          echo "================================"
+          echo "Runner connecté à GitHub"
+          echo "================================"
+          echo "Hostname :"
+          hostname
+          echo
+          echo "OS :"
+          uname -a
+          echo
+          echo "Utilisateur :"
+          whoami
