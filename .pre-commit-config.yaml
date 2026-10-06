@@ -1,9 +1,65 @@
 repos:
+  # ============================================================
+  # FICHIERS
+  # ============================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
+      # Supprime les espaces inutiles en fin de ligne
       - id: trailing-whitespace
+
+      # Garantit un retour à la ligne à la fin des fichiers
       - id: end-of-file-fixer
+
+      # Vérifie la syntaxe YAML
       - id: check-yaml
+
+      # Vérifie la syntaxe JSON
+      # Les tsconfig sont exclus car TypeScript accepte le JSONC
       - id: check-json
-      - id: check-added-large-files
+        exclude: ^tsconfig.*\.json$
+
+      # Empêche l'ajout de fichiers trop volumineux
+      # - id: check-added-large-files
+      # provoque : [WinError 4551] Une stratégie de contrôle d’application a bloqué ce fichier
+
+      # Détecte les conflits Git non résolus
+      # - id: check-merge-conflict
+      # provoque : [WinError 4551] Une stratégie de contrôle d’application a bloqué ce fichier
+
+      # Détecte les problèmes de casse entre fichiers
+      # - id: check-case-conflict
+      # provoque : [WinError 4551] Une stratégie de contrôle d’application a bloqué ce fichier
+
+  # ============================================================
+  # CODE
+  # ============================================================
+  - repo: local
+    hooks:
+      # ----------------------------------------------------------
+      # ESLint
+      # ----------------------------------------------------------
+      - id: eslint
+        name: ESLint
+        entry: npm run lint
+        language: system
+        pass_filenames: false
+
+      # ----------------------------------------------------------
+      # TypeScript
+      # ----------------------------------------------------------
+      - id: typecheck
+        name: TypeScript
+        entry: npm run typecheck
+        language: system
+        pass_filenames: false
+
+      # ==========================================================
+      # TESTS
+      # ==========================================================
+
+      - id: unit-tests
+        name: Unit tests
+        entry: npm test
+        language: system
+        pass_filenames: false
