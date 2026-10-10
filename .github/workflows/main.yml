@@ -1,9 +1,6 @@
-```yaml
 name: CI
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -26,5 +23,3 @@ jobs:
           npm --version
           test "$(node --version)" = "v24.13.1"
           test "$(npm --version)" = "11.8.0"
-
-```
