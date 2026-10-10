@@ -1,23 +1,33 @@
-name: Test Runner
+```yaml
+name: CI
 
 on:
+  push:
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  test-runner:
+  test:
+    name: Vérification du projet
     runs-on: self-hosted
 
     steps:
-      - name: Test communication
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.13.1
+
+      - name: Vérifier les versions
         run: |
-          echo "================================"
-          echo "Runner connecté à GitHub"
-          echo "================================"
-          echo "Hostname :"
-          hostname
-          echo
-          echo "OS :"
-          uname -a
-          echo
-          echo "Utilisateur :"
-          whoami
+          node --version
+          npm --version
+          test "$(node --version)" = "v24.13.1"
+          test "$(npm --version)" = "11.8.0"
+
+
+      - name: Construire le projet
+        run: npm run build
+```
