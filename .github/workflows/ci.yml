@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v6
+
+      - name: Installer Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lancer ESLint
+        run: npm run lint
+
+      - name: Vérifier TypeScript
+        run: npm run typecheck
+
+      - name: Lancer les tests
+        run: npm test
