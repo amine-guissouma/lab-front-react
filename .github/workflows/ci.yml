@@ -1,17 +1,26 @@
-name: CI
+name: CI/CD
 
 on:
   push:
+    branches:
+      - master
+
+  pull_request:
+    branches:
+      - master
+
+  workflow_dispatch:
 
 jobs:
   ci:
+    name: Vérification et build
     runs-on: self-hosted
 
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v6
 
-      - name: Installer Node
+      - name: Installer Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -19,11 +28,87 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
-      - name: Lancer ESLint
+      - name: Vérifier ESLint
         run: npm run lint
 
       - name: Vérifier TypeScript
         run: npm run typecheck
 
-      - name: Lancer les tests
-        run: npm test
+      - name: Exécuter les tests
+        run: npm test -- --run
+
+      - name: Construire l'application
+        run: npm run build
+
+      - name: Publier l'artefact React
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Déployer sur la VM Deploy
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: self-hosted
+
+    steps:
+      - name: Télécharger l'artefact React
+        uses: actions/download-artifact@v4
+        with:
+          name: react-dist
+          path: dist/
+
+      - name: Préparer les accès SSH
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          KEY_FILE="$RUNNER_TEMP/deploy_key"
+          KNOWN_HOSTS_FILE="$RUNNER_TEMP/deploy_known_hosts"
+
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KNOWN_HOSTS_FILE"
+
+      - name: Déployer les fichiers sur le serveur
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+
+          KEY_FILE="$RUNNER_TEMP/deploy_key"
+          KNOWN_HOSTS_FILE="$RUNNER_TEMP/deploy_known_hosts"
+          REMOTE_DIR="/var/www/labs/lab-front-react/socle"
+
+          SSH_OPTIONS=(
+            -i "$KEY_FILE"
+            -o IdentitiesOnly=yes
+            -o BatchMode=yes
+            -o StrictHostKeyChecking=yes
+            -o "UserKnownHostsFile=$KNOWN_HOSTS_FILE"
+          )
+
+          ssh "${SSH_OPTIONS[@]}" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p '$REMOTE_DIR'"
+
+          scp "${SSH_OPTIONS[@]}" -r \
+            dist/. \
+            "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_DIR/"
+
+      - name: Nettoyer les fichiers temporaires SSH
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/deploy_key"
+          rm -f "$RUNNER_TEMP/deploy_known_hosts"
