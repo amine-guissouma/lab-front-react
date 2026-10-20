@@ -1,13 +1,16 @@
+
 name: CI/CD
 
 on:
   push:
     branches:
       - master
+      - 'experience/**'
 
   pull_request:
     branches:
       - master
+      - 'experience/**'
 
   workflow_dispatch:
 
@@ -51,15 +54,60 @@ jobs:
   deploy:
     name: Déployer sur la VM Deploy
     needs: ci
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    if: github.event_name != 'pull_request'
     runs-on: self-hosted
 
     steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v6
+
       - name: Télécharger l'artefact React
         uses: actions/download-artifact@v4
         with:
           name: react-dist
           path: dist/
+
+      - name: Lire la configuration de déploiement
+        id: deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs = require('node:fs');
+
+          const config = JSON.parse(
+            fs.readFileSync('deployment.json', 'utf8')
+          );
+
+          if (
+            typeof config.remoteDir !== 'string' ||
+            typeof config.base !== 'string'
+          ) {
+            throw new Error(
+              'deployment.json doit définir remoteDir et base'
+            );
+          }
+
+          if (
+            !config.remoteDir.startsWith(
+              '/var/www/labs/lab-front-react/'
+            ) ||
+            config.remoteDir.includes('..')
+          ) {
+            throw new Error('remoteDir invalide');
+          }
+
+          if (
+            !config.base.startsWith('/') ||
+            !config.base.endsWith('/')
+          ) {
+            throw new Error('base doit commencer et finir par /');
+          }
+
+          console.log(`remote_dir=${config.remoteDir}`);
+          console.log(`base=${config.base}`);
+          NODE
 
       - name: Préparer les accès SSH
         shell: bash
@@ -83,12 +131,12 @@ jobs:
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          REMOTE_DIR: ${{ steps.deployment.outputs.remote_dir }}
         run: |
           set -euo pipefail
 
           KEY_FILE="$RUNNER_TEMP/deploy_key"
           KNOWN_HOSTS_FILE="$RUNNER_TEMP/deploy_known_hosts"
-          REMOTE_DIR="/var/www/labs/lab-front-react/socle"
 
           SSH_OPTIONS=(
             -i "$KEY_FILE"

@@ -45,6 +45,13 @@ repos:
         language: system
         pass_filenames: false
 
+      # Validation de la branche et de la destination
+      - id: validate-deployment
+        name: Validate deployment configuration
+        entry: bash scripts/validate-deployment.sh check
+        language: system
+        pass_filenames: false
+
       # ----------------------------------------------------------
       # TypeScript
       # ----------------------------------------------------------
