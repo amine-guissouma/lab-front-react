@@ -1,12 +1,14 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Affiche une erreur et arrête le script.
 fail() {
   echo "ERREUR : $*" >&2
   exit 1
 }
 
+
+# Détermine le mode : check par défaut, ou deploy.
 MODE="${1:-check}"
 
 case "$MODE" in
@@ -14,10 +16,13 @@ case "$MODE" in
   *) fail "Mode inconnu : $MODE (check ou deploy attendu)." ;;
 esac
 
+# Détermine la branche Git à contrôler.
 BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-$(git branch --show-current)}}"
 
 [[ -n "$BRANCH" ]] || fail "Impossible de déterminer la branche."
 
+# Charge la configuration depuis deployment.json.
+# Le fichier dédié renvoie les variables REMOTE_DIR et BASE.
 CONFIG="deployment.json"
 [[ -f "$CONFIG" ]] || fail "$CONFIG introuvable."
 
@@ -34,45 +39,51 @@ BASE="$(read_json_string base)"
 [[ -n "$REMOTE_DIR" ]] || fail "remoteDir absent ou vide."
 [[ -n "$BASE" ]] || fail "base absent ou vide."
 
-# Les branches ordinaires peuvent être testées,
-# mais elles ne sont pas autorisées à déployer.
+# Autorise les branches ordinaires pour les tests,
+# mais interdit leur déploiement.
 if [[ "$BRANCH" != "master" ]] &&
-   [[ ! "$BRANCH" =~ ^experience/([a-z0-9]+(-[a-z0-9]+)*)$ ]]; then
+   [[ ! "$BRANCH" =~ ^experience/([a-z0-9]+([_-][a-z0-9]+)*)$ ]]; then
+
   if [[ "$MODE" == "deploy" ]]; then
     fail "Branche '$BRANCH' interdite au déploiement."
   fi
 
   echo "INFO : branche non déployable : $BRANCH"
   echo "INFO : les tests peuvent continuer."
-  exit 0
+   exit 0
 fi
 
+# Détermine les chemins attendus selon la branche.
 if [[ "$BRANCH" == "master" ]]; then
   EXPECTED_REMOTE="/var/www/labs/lab-front-react/socle"
   EXPECTED_BASE="/"
 else
-  [[ "$BRANCH" =~ ^experience/([a-z0-9]+(-[a-z0-9]+)*)$ ]] ||
-    fail "Nom de branche invalide : $BRANCH"
+  # Récupère la partie située après le premier "/".
+  EXPERIENCE="${BRANCH#*/}"
 
-  EXPERIENCE="${BASH_REMATCH[1]}"
+  # Construit les chemins attendus.
   EXPECTED_REMOTE="/var/www/labs/lab-front-react/experiences/$EXPERIENCE"
   EXPECTED_BASE="/experiences/$EXPERIENCE/"
 fi
 
+# Vérifie le dossier distant configuré.
 [[ "$REMOTE_DIR" == "$EXPECTED_REMOTE" ]] ||
   fail "remoteDir incorrect. Attendu : $EXPECTED_REMOTE ; obtenu : $REMOTE_DIR"
 
+# Vérifie le chemin de base configuré.
 [[ "$BASE" == "$EXPECTED_BASE" ]] ||
   fail "base incorrecte. Attendu : $EXPECTED_BASE ; obtenu : $BASE"
 
+# Affiche le résultat des validations.
+echo ""
 echo "Branche validée : $BRANCH"
 echo "remoteDir validé : $REMOTE_DIR"
 echo "base validée : $BASE"
 
-# Sorties utilisables par GitHub Actions.
+# Expose les valeurs comme sorties GitHub Actions.
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   {
-    echo "remoteDir=$REMOTE_DIR"
+    echo "remote_dir=$REMOTE_DIR"
     echo "base=$BASE"
   } >> "$GITHUB_OUTPUT"
 fi
