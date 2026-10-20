@@ -28,6 +28,10 @@ jobs:
         with:
           node-version: 24
 
+      - name: Vérifier la configuration de déploiement
+        shell: bash
+        run: bash scripts/validate-deployment.sh check
+
       - name: Installer les dépendances
         run: npm ci
 
@@ -61,53 +65,16 @@ jobs:
       - name: Récupérer le code
         uses: actions/checkout@v6
 
+      - name: Vérifier strictement la branche et la destination
+        id: deployment
+        shell: bash
+        run: bash scripts/validate-deployment.sh deploy
+
       - name: Télécharger l'artefact React
         uses: actions/download-artifact@v4
         with:
           name: react-dist
           path: dist/
-
-      - name: Lire la configuration de déploiement
-        id: deployment
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          node <<'NODE' >> "$GITHUB_OUTPUT"
-          const fs = require('node:fs');
-
-          const config = JSON.parse(
-            fs.readFileSync('deployment.json', 'utf8')
-          );
-
-          if (
-            typeof config.remoteDir !== 'string' ||
-            typeof config.base !== 'string'
-          ) {
-            throw new Error(
-              'deployment.json doit définir remoteDir et base'
-            );
-          }
-
-          if (
-            !config.remoteDir.startsWith(
-              '/var/www/labs/lab-front-react/'
-            ) ||
-            config.remoteDir.includes('..')
-          ) {
-            throw new Error('remoteDir invalide');
-          }
-
-          if (
-            !config.base.startsWith('/') ||
-            !config.base.endsWith('/')
-          ) {
-            throw new Error('base doit commencer et finir par /');
-          }
-
-          console.log(`remote_dir=${config.remoteDir}`);
-          console.log(`base=${config.base}`);
-          NODE
 
       - name: Préparer les accès SSH
         shell: bash
@@ -137,6 +104,11 @@ jobs:
 
           KEY_FILE="$RUNNER_TEMP/deploy_key"
           KNOWN_HOSTS_FILE="$RUNNER_TEMP/deploy_known_hosts"
+
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          test -n "$REMOTE_DIR"
+          test -d dist
 
           SSH_OPTIONS=(
             -i "$KEY_FILE"
