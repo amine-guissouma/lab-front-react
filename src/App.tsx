@@ -19,7 +19,7 @@ function App() {
 
   return (
     <main>
-      <h1>Laboratoire Socle </h1>
+      <h1>Laboratoire -experiences _ test_depoyment_experience </h1>
 
       <p>
         <strong>LAB FRONT :</strong> {LAB_NAME}

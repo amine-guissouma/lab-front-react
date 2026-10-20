@@ -1,4 +1,4 @@
 {
-  "remoteDir": "/var/www/labs/lab-front-react/socle",
-  "base": "/"
+  "remoteDir": "/var/www/labs/lab-front-react/experiences/test_depoyment_experience",
+  "base": "/experiences/test_depoyment_experience/"
 }
