@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { LAB_NAME } from './config/config_socle';
 import { getLab } from './api/client';
 
+import deployment from '../deployment.json' with { type: 'json' };
+
 function App() {
   const [backendName, setBackendName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ function App() {
 
   return (
     <main>
-      <h1>Laboratoire Socle </h1>
+      <h1>Laboratoire {deployment.title} </h1>
 
       <p>
         <strong>LAB FRONT :</strong> {LAB_NAME}
